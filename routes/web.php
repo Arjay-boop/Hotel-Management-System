@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\HousekeeperController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -70,5 +71,7 @@ Route::middleware(['auth', 'user-access:2'])->group(function() {
 });
 
 Route::middleware(['auth', 'user-access:3'])->group(function() {
-    Route::get('/Housekeeper/Dashboard', [HomeController::class, 'housekeeperHome'])->name('housekeeper.home');
+    Route::get('/Housekeeper/Dashboard', [HousekeeperController::class, 'housekeeperHome'])->name('housekeeper.home');
+    Route::get('/Housekeeper/Rooms', [HousekeeperController::class, 'Rooms'])->name('housekeeper.rooms');
+    Route::put('/housekeeper/update-room/{roomId}', [HousekeeperController::class, 'updateRoomStatusAndAmenities'])->name('housekeeper.update-room');
 });

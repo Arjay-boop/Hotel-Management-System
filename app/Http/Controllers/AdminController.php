@@ -878,8 +878,17 @@ class AdminController extends Controller
         $totalGuests = [];
         foreach ($lodges as $lodge) {
             $dailyReports = DailyReports::where('lodge_id', $lodge->lodge_id)->get();
-            $totalGuests[$lodge->area] = $dailyReports->sum('total_customers_by_gender');
+
+            // Decode JSON and sum values, ensuring they are numeric
+            $total_customers_by_gender = collect($dailyReports->pluck('total_customers_by_gender')->filter())->flatten()->reduce(function ($carry, $item) {
+                // Check if item is numeric before adding
+                return is_numeric($item) ? $carry + $item : $carry;
+            }, 0);
+
+            $totalGuests[$lodge->area] = $total_customers_by_gender;
         }
+
+
 
         $damageCosts = [];
         foreach ($lodges as $lodge) {
