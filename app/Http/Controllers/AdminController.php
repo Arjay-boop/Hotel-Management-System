@@ -14,6 +14,7 @@ use App\Models\RoomImages;
 use App\Models\Rooms;
 use App\Models\User;
 use Carbon\Carbon;
+use Dompdf\Dompdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -926,6 +927,61 @@ class AdminController extends Controller
                                         'totalRooms',
                                         'totalCustomers'
                                     ));
+    }
+
+    public function generatePDF(Request $request)
+    {
+        // Get selected parameters from the request
+        $reportType = $request->input('type_report');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $lodgeId = $request->input('lodge_id');
+
+        // Validate report type
+        $validReportTypes = ['revenue', 'occupancy_rate', 'damage_rate', 'average_rate', 'total_bookings', 'total_customers_by_gender', 'total_damage'];
+        if (!in_array($reportType, $validReportTypes)) {
+            return response()->json(['error' => 'Invalid report type.'], 400);
+        }
+
+        // Query the DailyReports table based on the selected parameters
+        $query = DailyReports::query()->whereBetween('report_date', [$startDate, $endDate]);
+
+        // Optionally, filter by lodge ID if provided
+        if ($lodgeId) {
+            $query->where('lodge_id', $lodgeId);
+        }
+
+        // Get the report data based on the selected parameters
+        $reports = $query->get();
+
+        // Check if reports are empty
+        if ($reports->isEmpty()) {
+            return response()->json(['message' => 'No data found for the selected parameters.'], 404);
+        }
+
+        // Generate HTML content for the PDF
+        $html = '<h1>' . ucfirst($reportType) . ' Report</h1>';
+        $html .= '<p>Start Date: ' . $startDate . '</p>';
+        $html .= '<p>End Date: ' . $endDate . '</p>';
+        $html .= '<table>';
+        $html .= '<thead><tr><th>Date</th><th>' . ucfirst($reportType) . '</th></tr></thead>';
+        $html .= '<tbody>';
+        foreach ($reports as $report) {
+            $html .= '<tr>';
+            $html .= '<td>' . $report->report_date . '</td>';
+            $html .= '<td>' . $report->$reportType . '</td>';
+            $html .= '</tr>';
+        }
+        $html .= '</tbody></table>';
+
+        // Generate PDF using Dompdf
+        $dompdf = new Dompdf();
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->render();
+
+        // Download the generated PDF file
+        return $dompdf->stream('report.pdf');
     }
 
 }

@@ -33,6 +33,7 @@
                                 <label>Lodge Area</label>
                                 <select name="lodge_id" id="lodge_id" class="form-control">
                                     <option selected>Select Lodge</option>
+                                    <option value="*">All</option>
                                 </select>
                             </div>
                         </div>
@@ -51,7 +52,7 @@
                         <div class="col-md-3">
                             <div class="row">
                                 <div class="col-md-8 pt-3">
-                                    <a href="" class="btn btn-primary viewbutton">Generate Report</a>
+                                    <button id="generateReportBtn" class="btn btn-primary">Generate Report</button>
                                 </div>
                             </div>
                         </div>
@@ -62,7 +63,7 @@
     </div>
 
     <div class="row">
-        <div class="col-md-12 col-lg-6">
+        <div class="col-md-12 col-lg-6" id="occupancy">
             <div class="card card-chart">
                 <div class="card-header">
                     <h4 class="card-title">Occupancy Rate</h4>
@@ -72,7 +73,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-12 col-lg-6">
+        <div class="col-md-12 col-lg-6" id="room_damage">
             <div class="card card-chart">
                 <div class="card-header">
                     <h4 class="card-title">Room Damage Rate</h4>
@@ -84,7 +85,7 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-12 col-lg-6">
+        <div class="col-md-12 col-lg-6" id="average_rate">
             <div class="card card-chart">
                 <div class="card-header">
                     <h4 class="card-title">Average Rate</h4>
@@ -94,7 +95,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-12 col-lg-6">
+        <div class="col-md-12 col-lg-6" id="revenue">
             <div class="card card-chart">
                 <div class="card-header">
                     <h4 class="card-title">REVENUE</h4>
@@ -106,7 +107,7 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-12 col-lg-12">
+        <div class="col-md-12 col-lg-12" id="total_guest">
             <div class="card card-chart">
                 <div class="card-header">
                     <h4 class="card-title">TOTAL GUESTS</h4>
@@ -118,7 +119,7 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-12 col-lg-6">
+        <div class="col-md-12 col-lg-6" id="damage_cost">
             <div class="card card-chart">
                 <div class="card-header">
                     <h4 class="card-title">Damage Cost</h4>
@@ -128,7 +129,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-12 col-lg-6">
+        <div class="col-md-12 col-lg-6" id="total_rooms">
             <div class="card card-chart">
                 <div class="card-header">
                     <h4 class="card-title">Total Rooms</h4>
@@ -140,7 +141,7 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-12 col-lg-12">
+        <div class="col-md-12 col-lg-12" id="customer_rate">
             <div class="card card-chart">
                 <div class="card-header">
                     <h4 class="card-title">Customer Rate</h4>
@@ -153,7 +154,28 @@
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
 <script>
+     // Function to set chart dimensions
+    function setChartDimensions(chartId) {
+        var chartCanvas = document.getElementById(chartId);
+        if (chartCanvas) {
+            chartCanvas.width = 400; // Set width to desired value
+            chartCanvas.height = 300; // Set height to desired value
+        }
+    }
+
+    // Call function to set dimensions for each chart
+    setChartDimensions('revenueChart');
+    setChartDimensions('occupancyRateChart');
+    setChartDimensions('damageRateChart');
+    setChartDimensions('averageRateChart');
+    setChartDimensions('totalGuestsChart');
+    setChartDimensions('damageCostChart');
+    setChartDimensions('totalRoomsChart');
+    setChartDimensions('totalCustomersChart');
+
     //revenue
         var ctx = document.getElementById('revenueChart').getContext('2d');
 
@@ -175,6 +197,8 @@
             type: 'bar',
             data: data,
             options: {
+                responsive: true,
+                maintainAspectRatio: false,
                 scales: {
                     yAxes: [{
                         ticks: {
@@ -218,6 +242,8 @@
             type: 'line',
             data: data,
             options: {
+                responsive: true,
+                maintainAspectRatio: false,
                 scales: {
                     xAxes: [{
                         ticks: {
@@ -261,6 +287,8 @@
             type: 'line',
             data: data,
             options: {
+                responsive: true,
+                maintainAspectRatio: false,
                 scales: {
                     xAxes: [{
                         ticks: {
@@ -301,7 +329,8 @@
             type: 'polarArea',
             data: data,
             options: {
-
+                responsive: true,
+                maintainAspectRatio: false,
             }
         });
 
@@ -333,7 +362,10 @@
         var myChart = new Chart(ctx, {
             type: 'pie',
             data: data,
-            options: {}
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+            }
         });
 
         // Function to generate random color
@@ -368,6 +400,8 @@
             type: 'bar',
             data: data,
             options: {
+                responsive: true,
+                maintainAspectRatio: false,
                 scales: {
                     yAxes: [{
                         ticks: {
@@ -405,7 +439,10 @@
         var myChart = new Chart(ctx, {
             type: 'pie',
             data: data,
-            options: {}
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+            }
         });
 
         // Function to generate random color
@@ -444,6 +481,8 @@
             type: 'bar',
             data: data,
             options: {
+                responsive: true,
+                maintainAspectRatio: false,
                 scales: {
                     yAxes: [{
                         ticks: {
@@ -453,5 +492,99 @@
                 }
             }
         });
+    //Generate Report
+
+document.getElementById('generateReportBtn').addEventListener('click', function(event) {
+    event.preventDefault(); // Prevent the default form submission behavior
+
+    Swal.fire({
+        title: 'Generate Report',
+        html: `
+            <!-- Your form HTML -->
+            <form id="reportForm" method="POST" action="{{ route('generate.pdf') }}">
+                @csrf
+                    <div class="col">
+                        <div class="row-md-3">
+                            <div class="form-group">
+                                <label>Type of Report</label>
+                                <select name="type_report" id="type_report" class="form-control">
+                                    <option selected>Select Type of Report</option>
+                                    <option value="*">All</option>
+                                    <option value="revenue">Revenue</option>
+                                    <option value="occupancy_rate">Occupancy Rate</option>
+                                    <option value="average_rate">Ratings</option>
+                                    <option value="total_bookings">Bookings</option>
+                                    <option value="total_customers_by_gender">Customer-By-Gender</option>
+                                    <option value="total_damage">Damages</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row-md-3">
+                            <div class="form-group">
+                                <label>Lodge Area</label>
+                                <select name="lodge_id" id="lodge_id" class="form-control">
+                                    <option selected>Select Lodge</option>
+                                    <option value="*">All</option>
+                                    @foreach ($lodges as $lodge)
+                                        <option value="$lodge->lodge_id">{{ $lodge->area }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row-md-3">
+                            <div class="form-group">
+                                <label>Start Date</label>
+                                <input type="date" name="start_date" id="start_date" class="form-control">
+                            </div>
+                        </div>
+                        <div class="row-md-3">
+                            <div class="form-group">
+                                <label>End Date</label>
+                                <input type="date" name="end_date" id="end_date" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+            </form>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Generate',
+        cancelButtonText: 'Cancel',
+        preConfirm: () => {
+            // Handle form submission
+            const formData = {
+                type_report: document.getElementById('type_report').value, // Include the selected type of report
+                lodge_id: document.getElementById('lodge_id').value,
+                start_date: document.getElementById('start_date').value,
+                end_date: document.getElementById('end_date').value
+            };
+
+            // Make an AJAX request to the server to generate the report based on the selected parameters
+            axios.post('/Admin/Generate-Report', formData)
+                .then(response => {
+                    // Handle successful response
+                    const pdfUrl = response.data.pdf_url; // Assuming the server returns the URL to the generated PDF
+                    window.open(pdfUrl, '_blank'); // Open the PDF in a new tab
+                })
+                .catch(error => {
+                    // Handle error
+                    console.error('Error generating PDF report:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to generate PDF report. Please try again.',
+                    });
+                });
+        }
+    });
+});
+
+
 </script>
+
+<style>
+    .reportForm {
+        width: 60% !important; /* Adjust the width as needed */
+        max-width: 800px !important; /* Adjust the max-width as needed */
+    }
+</style>
 @endsection

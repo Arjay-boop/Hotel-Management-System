@@ -64,6 +64,7 @@ Route::middleware(['auth', 'user-access:1'])->group(function (){
     Route::post('/Admin/Add-Event', [AdminController::class, 'StoreEvent'])->name('admin.store-event');
     //Analytics
     Route::get('/Admin/Analytics', [AdminController::class, 'Analytics'])->name('admin.analytics');
+    Route::post('/Admin/Generate-Report', [AdminController::class, 'generatePDF'])->name('generate.pdf');
 });
 
 Route::middleware(['auth', 'user-access:2'])->group(function() {
