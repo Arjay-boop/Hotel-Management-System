@@ -11,53 +11,15 @@
         </div>
         <div class="row">
             <div class="col-lg-12">
-                <form action="">
-                    <div class="row formtype">
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label>Type of Report</label>
-                                <select name="type_report" id="type_report" class="form-control">
-                                    <option selected>Select Type of Report</option>
-                                    <option value="*">All</option>
-                                    <option value="revenue">Revenue</option>
-                                    <option value="occupancy_rate">Occupancy Rate</option>
-                                    <option value="average_rate">Ratings</option>
-                                    <option value="total_bookings">Bookings</option>
-                                    <option value="total_customers_by_gender">Customer-By-Gender</option>
-                                    <option value="total_damage">Damages</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label>Lodge Area</label>
-                                <select name="lodge_id" id="lodge_id" class="form-control">
-                                    <option selected>Select Lodge</option>
-                                    <option value="*">All</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label>Start Date</label>
-                                <input type="date" name="start_date" id="start_date" class="form-control">
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label>End Date</label>
-                                <input type="date" name="end_date" id="end_date" class="form-control">
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="row">
-                                <div class="col-md-8 pt-3">
-                                    <button id="generateReportBtn" class="btn btn-primary">Generate Report</button>
-                                </div>
+                <div class="row formtype">
+                    <div class="col-md-3">
+                        <div class="row">
+                            <div class="col-md-8 pt-3">
+                                <button type="button" onclick="showReportForm(event)" class="btn btn-primary">Generate Report</button>
                             </div>
                         </div>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
@@ -494,16 +456,14 @@
         });
     //Generate Report
 
-document.getElementById('generateReportBtn').addEventListener('click', function(event) {
-    event.preventDefault(); // Prevent the default form submission behavior
-
-    Swal.fire({
-        title: 'Generate Report',
-        html: `
-            <!-- Your form HTML -->
-            <form id="reportForm" method="POST" action="{{ route('generate.pdf') }}">
-                @csrf
-                    <div class="col">
+    function showReportForm(event) {
+        event.preventDefault();
+        Swal.fire({
+            title: 'Generate Report',
+            html: `
+                <form id="reportForm">
+                    @csrf
+                    <div class="col formtype">
                         <div class="row-md-3">
                             <div class="form-group">
                                 <label>Type of Report</label>
@@ -526,7 +486,7 @@ document.getElementById('generateReportBtn').addEventListener('click', function(
                                     <option selected>Select Lodge</option>
                                     <option value="*">All</option>
                                     @foreach ($lodges as $lodge)
-                                        <option value="$lodge->lodge_id">{{ $lodge->area }}</option>
+                                        <option value="{{ $lodge->lodge_id }}">{{ $lodge->area }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -544,40 +504,58 @@ document.getElementById('generateReportBtn').addEventListener('click', function(
                             </div>
                         </div>
                     </div>
-            </form>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Generate',
-        cancelButtonText: 'Cancel',
-        preConfirm: () => {
-            // Handle form submission
-            const formData = {
-                type_report: document.getElementById('type_report').value, // Include the selected type of report
-                lodge_id: document.getElementById('lodge_id').value,
-                start_date: document.getElementById('start_date').value,
-                end_date: document.getElementById('end_date').value
-            };
+                </form>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Generate',
+            cancelButtonText: 'Cancel',
+            preConfirm: () => {
+                console.log('Report Type:', document.getElementById('type_report').value);
+                console.log('Lodge ID:', document.getElementById('lodge_id').value);
+                console.log('Start Date:', document.getElementById('start_date').value);
+                console.log('End Date:', document.getElementById('end_date').value);
 
-            // Make an AJAX request to the server to generate the report based on the selected parameters
-            axios.post('/Admin/Generate-Report', formData)
-                .then(response => {
-                    // Handle successful response
-                    const pdfUrl = response.data.pdf_url; // Assuming the server returns the URL to the generated PDF
-                    window.open(pdfUrl, '_blank'); // Open the PDF in a new tab
-                })
-                .catch(error => {
-                    // Handle error
-                    console.error('Error generating PDF report:', error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Failed to generate PDF report. Please try again.',
-                    });
-                });
+                return {
+                    reportType: document.getElementById('type_report').value,
+                    lodgeId: document.getElementById('lodge_id').value,
+                    startDate: document.getElementById('start_date').value,
+                    endDate: document.getElementById('end_date').value
+                };
+            }
+        }).then(result => {
+            if (result.isConfirmed) {
+                generateReport(result.value);
+            }
+        });
+    }
+
+    function generateReport(formData) {
+    // Send AJAX request to Laravel controller
+    // Get CSRF token value from the meta tag
+    var csrfToken = $('meta[name="csrf-token"]').attr('content');
+
+    // Append CSRF token to the form data
+    formData._token = csrfToken;
+    $.ajax({
+        type: 'GET',
+        url: '/generate-report',
+        data: formData,
+        success: function(response) {
+            // Check if the response is a PDF file
+            if (response) {
+                // Directly open the PDF in the browser
+                window.open('/generate-report?reportType=' + formData.reportType + '&lodgeId=' + formData.lodgeId + '&startDate=' + formData.startDate + '&endDate=' + formData.endDate);
+            } else {
+                // Handle empty response or other errors
+                console.error('Empty response or error occurred');
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error(xhr.responseText);
+            // Handle errors
         }
     });
-});
-
+}
 
 </script>
 

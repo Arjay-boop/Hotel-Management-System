@@ -28,4 +28,48 @@ class DailyReports extends Model
     {
         return $this->belongsTo(LodgeAreas::class, 'lodge_id', 'lodge_id');
     }
+
+    public static function generateReport($reportType, $lodgeId, $startDate, $endDate)
+    {
+        $query = self::query()->whereBetween('report_date', [$startDate, $endDate]);
+
+        if ($lodgeId !== 'all') {
+            $query->where('lodge_id', $lodgeId);
+        }
+
+        switch ($reportType) {
+            case 'revenue':
+                $query->selectRaw('SUM(revenue) as total');
+                break;
+            case 'occupancy_rate':
+                $query->selectRaw('AVG(occupancy_rate) as average');
+                break;
+            case 'damage_rate':
+                $query->selectRaw('AVG(damage_rate) as average');
+                break;
+            case 'average_rate':
+                $query->selectRaw('AVG(average_rate) as average');
+                break;
+            case 'total_bookings':
+                $query->selectRaw('SUM(total_bookings) as total');
+                break;
+            case 'total_customers_by_gender':
+                $query->selectRaw('SUM(total_customers_by_gender) as total');
+                break;
+            case 'total_rooms':
+                $query->selectRaw('SUM(total_rooms) as total');
+                break;
+            case 'total_damage':
+                $query->selectRaw('SUM(total_damage) as total');
+                break;
+            case 'all':
+                // No specific report type, get all fields
+                break;
+            default:
+                // Invalid report type
+                return null;
+        }
+
+        return $query->first()->toArray();
+    }
 }

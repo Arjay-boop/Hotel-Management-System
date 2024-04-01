@@ -13,13 +13,18 @@ use App\Models\Ratings;
 use App\Models\RoomImages;
 use App\Models\Rooms;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Dompdf\Dompdf;
+use Dompdf\Options;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\View;
+use PDFLib;
 
 class AdminController extends Controller
 {
@@ -929,59 +934,77 @@ class AdminController extends Controller
                                     ));
     }
 
-    public function generatePDF(Request $request)
+    public function generateReport(Request $request)
     {
-        // Get selected parameters from the request
-        $reportType = $request->input('type_report');
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-        $lodgeId = $request->input('lodge_id');
+        // Retrieve form data
+        $reportType = $request->input('reportType');
+        $lodgeId = $request->input('lodgeId');
+        $startDate = $request->input('startDate');
+        $endDate = $request->input('endDate');
 
-        // Validate report type
-        $validReportTypes = ['revenue', 'occupancy_rate', 'damage_rate', 'average_rate', 'total_bookings', 'total_customers_by_gender', 'total_damage'];
-        if (!in_array($reportType, $validReportTypes)) {
-            return response()->json(['error' => 'Invalid report type.'], 400);
+        // Query database based on selected parameters
+        $reports = DailyReports::where('report_date', '>=', $startDate)
+            ->where('report_date', '<=', $endDate);
+
+        if ($lodgeId !== '*') {
+            $reports->where('lodge_id', $lodgeId);
         }
 
-        // Query the DailyReports table based on the selected parameters
-        $query = DailyReports::query()->whereBetween('report_date', [$startDate, $endDate]);
-
-        // Optionally, filter by lodge ID if provided
-        if ($lodgeId) {
-            $query->where('lodge_id', $lodgeId);
+        // Add more conditions based on report type if needed
+        // For example:
+        if ($reportType === '*') {
+            // Retrieve all available report types
+            $reports->select('report_date', 'revenue', 'occupancy_rate', 'damage_rate', 'total_damage', 'total_bookings', 'average_rate', 'total_customers_by_gender');
+        } elseif ($reportType === 'revenue') {
+            $reports->select('report_date', 'revenue');
+        } elseif ($reportType === 'occupancy_rate') {
+            $reports->select('report_date', 'occupancy_rate');
+        } elseif($reportType === 'average_rate') {
+            $reports->select('report_date', 'average_rate');
+        } elseif($reportType === 'total_bookings') {
+            $reports->select('report_date', 'total_bookings');
+        } elseif($reportType === 'total_customers_by_gender') {
+            $reports->select('report_date', 'total_customers_by_gender');
+        } elseif($reportType === 'total_damage') {
+            $reports->select('report_date', 'damage_rate', 'total_damage');
         }
 
-        // Get the report data based on the selected parameters
-        $reports = $query->get();
+        // Execute the query
+        $reportData = $reports->get();
 
-        // Check if reports are empty
-        if ($reports->isEmpty()) {
-            return response()->json(['message' => 'No data found for the selected parameters.'], 404);
+        // Process data and prepare for chart rendering
+        $dates = $reportData->pluck('report_date')->toArray();
+        $revenue = $reportData->pluck('revenue')->toArray();
+
+        // Check if it's an AJAX request
+        if ($request->ajax()) {
+            return response()->json($reportData);
         }
 
-        // Generate HTML content for the PDF
-        $html = '<h1>' . ucfirst($reportType) . ' Report</h1>';
-        $html .= '<p>Start Date: ' . $startDate . '</p>';
-        $html .= '<p>End Date: ' . $endDate . '</p>';
-        $html .= '<table>';
-        $html .= '<thead><tr><th>Date</th><th>' . ucfirst($reportType) . '</th></tr></thead>';
-        $html .= '<tbody>';
-        foreach ($reports as $report) {
-            $html .= '<tr>';
-            $html .= '<td>' . $report->report_date . '</td>';
-            $html .= '<td>' . $report->$reportType . '</td>';
-            $html .= '</tr>';
-        }
-        $html .= '</tbody></table>';
+        // Render chart data as JSON
+        $revenueChart = json_encode([
+            'labels' => $dates,
+            'datasets' => [
+                [
+                    'label' => 'Revenue',
+                    'data' => $revenue,
+                    'backgroundColor' => 'rgba(255, 99, 132, 0.2)',
+                    'borderColor' => 'rgba(255, 99, 132, 1)',
+                    'borderWidth' => 1,
+                ],
+            ],
+        ]);
 
-        // Generate PDF using Dompdf
-        $dompdf = new Dompdf();
-        $dompdf->loadHtml($html);
-        $dompdf->setPaper('A4', 'landscape');
-        $dompdf->render();
+        // Generate PDF from view
+        $pdf = PDF::loadView('Admin.report',
+                        compact('reportData',
+                                'reportType',
+                                'lodgeId',
+                                'startDate',
+                                'endDate',
+                                'revenueChart'));
 
-        // Download the generated PDF file
-        return $dompdf->stream('report.pdf');
+        // Download the PDF with a specific filename
+        return $pdf->stream('report.pdf');
     }
-
 }
