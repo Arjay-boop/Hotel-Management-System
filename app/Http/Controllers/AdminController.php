@@ -972,29 +972,12 @@ class AdminController extends Controller
         // Execute the query
         $reportData = $reports->get();
 
-        // Process data and prepare for chart rendering
-        $dates = $reportData->pluck('report_date')->toArray();
-        $revenue = $reportData->pluck('revenue')->toArray();
+        $revenueChart = $this->revenueChart($reportData);
 
         // Check if it's an AJAX request
         if ($request->ajax()) {
             return response()->json($reportData);
         }
-
-        // Render chart data as JSON
-        $revenueChart = json_encode([
-            'labels' => $dates,
-            'datasets' => [
-                [
-                    'label' => 'Revenue',
-                    'data' => $revenue,
-                    'backgroundColor' => 'rgba(255, 99, 132, 0.2)',
-                    'borderColor' => 'rgba(255, 99, 132, 1)',
-                    'borderWidth' => 1,
-                ],
-            ],
-        ]);
-
         // Generate PDF from view
         $pdf = PDF::loadView('Admin.report',
                         compact('reportData',
@@ -1006,5 +989,24 @@ class AdminController extends Controller
 
         // Download the PDF with a specific filename
         return $pdf->stream('report.pdf');
+    }
+
+    private function revenueChart($reportData)
+    {
+        $dates = $reportData->pluck('report_date')->toArray();
+        $revenue = $reportData->pluck('revenue')->toArray();
+
+        return json_encode([
+            'labels' => $dates,
+            'datasets' => [
+                [
+                    'labels' => 'Revenue',
+                    'data' => $revenue,
+                    'backgroundColor' => 'rgba(255, 99, 132, 0.2)',
+                    'borderColor' => 'rgba(255, 99, 132, 1)',
+                    'borderWidth' => 1,
+                ],
+            ],
+        ]);
     }
 }

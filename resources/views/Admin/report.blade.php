@@ -89,60 +89,6 @@
             <span></span>
         </div>
     @endif
-    {{-- <table border="1">
-        <thead>
-            <tr>
-                <th>Date</th>
-                @if ($reportType === 'revenue' || $reportType === '*')
-                    <th>Revenue</th>
-                @endif
-                @if ($reportType === 'occupancy_rate' || $reportType === '*')
-                    <th>Occupancy Rate</th>
-                @endif
-                @if ($reportType === 'average_rate' || $reportType === '*')
-                    <th>Average Rate</th>
-                @endif
-                @if ($reportType === 'total_bookings' || $reportType === '*')
-                    <th>Total Bookings</th>
-                @endif
-                @if ($reportType === 'total_customers_by_gender' || $reportType === '*')
-                    <th>Total Customers by Gender</th>
-                @endif
-                @if ($reportType === 'total_damage' || $reportType === '*')
-                    <th>Damage Rate</th>
-                    <th>Total Damage</th>
-                @endif
-                <!-- Add more table headers for other report types -->
-            </tr>
-        </thead>
-        <tbody>
-            @foreach ($reportData as $data)
-                <tr>
-                    <td>{{ $data->report_date }}</td>
-                    @if ($reportType === 'revenue' || $reportType === '*')
-                        <td>{{ $data->revenue }}</td>
-                    @endif
-                    @if ($reportType === 'occupancy_rate' || $reportType === '*')
-                        <td>{{ $data->occupancy_rate }}</td>
-                    @endif
-                    @if ($reportType === 'Ratings' || $reportType === '*')
-                        <td>{{ $data->average_rate }}</td>
-                    @endif
-                    @if ($reportType === 'Bookings' || $reportType === '*')
-                        <td>{{ $data->total_bookings }}</td>
-                    @endif
-                    @if ($reportType === 'Customer-By-Gender' || $reportType === '*')
-                        <td>{{ $data->total_customers_by_gender }}</td>
-                    @endif
-                    @if ($reportType === 'Damages' || $reportType === '*')
-                        <td>{{ $data->damage_rate }}</td>
-                        <td>{{ $data->total_damage }}</td>
-                    @endif
-                    <!-- Add more table cells for other report types -->
-                </tr>
-            @endforeach
-        </tbody>
-    </table> --}}
     <script>
         // Get chart data passed from the controller
         var revenueChart = {!! $revenueChart !!};
