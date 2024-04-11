@@ -1,7 +1,11 @@
 @extends('Admin.layout')
 
 @section('content')
-
+<style>
+    .d-none {
+        display: none;
+    }
+</style>
 <div class="content container-fluid">
     <div class="page-header">
         <div class="col">
@@ -12,20 +16,63 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="row formtype">
-                    <div class="col-md-3">
-                        <div class="row">
-                            <div class="col-md-8 pt-3">
-                                <button type="button" onclick="showReportForm(event)" class="btn btn-primary">Generate Report</button>
+                    <form id="reportForm">
+                        @csrf
+                        <div class="row formtype">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Type of Report</label>
+                                    <select onchange="showChart(this)" name="type_report" id="type_report" class="form-control">
+                                        <option value="*" selected>Select All</option>
+                                        <option value="revenue">Revenue</option>
+                                        <option value="occupancy_rate">Occupancy Rate</option>
+                                        <option value="average_rate">Ratings</option>
+                                        <option value="total_bookings">Bookings</option>
+                                        <option value="total_customers_by_gender">Customer-By-Gender</option>
+                                        <option value="damage_rate">Damage Rate</option>
+                                        <option value="damage_cost">Damage Cost</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Lodge Area</label>
+                                    <select name="lodge_id" id="lodge_id" class="form-control">
+                                        <option value="*" selected>Select All Lodge</option>
+                                        @foreach ($lodges as $lodge)
+                                            <option value="{{ $lodge->area }}">{{ $lodge->area }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Start Date</label>
+                                    <input onchange="filterDateArray()" type="date" name="start_date" id="start_date" class="form-control">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>End Date</label>
+                                    <input onchange="filterDateArray()" type="date" name="end_date" id="end_date" class="form-control">
+                                </div>
+                            </div>
+                            <div class="row-md-3">
+                                <div class="col">
+                                    <div class="row-md-8 pt-3">
+                                        <button type="submit" class="btn btn-primary">Generate Report</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-12 col-lg-6" id="occupancy">
+        <div class="col-md-12 col-lg-6" id="occupancy_rate">
             <div class="card card-chart">
                 <div class="card-header">
                     <h4 class="card-title">Occupancy Rate</h4>
@@ -35,7 +82,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-12 col-lg-6" id="room_damage">
+        <div class="col-md-12 col-lg-6" id="damage_rate">
             <div class="card card-chart">
                 <div class="card-header">
                     <h4 class="card-title">Room Damage Rate</h4>
@@ -69,7 +116,7 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-12 col-lg-12" id="total_guest">
+        <div class="col-md-12 col-lg-12" id="total_bookings">
             <div class="card card-chart">
                 <div class="card-header">
                     <h4 class="card-title">TOTAL GUESTS</h4>
@@ -103,7 +150,7 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-12 col-lg-12" id="customer_rate">
+        <div class="col-md-12 col-lg-12" id="total_customers_by_gender">
             <div class="card card-chart">
                 <div class="card-header">
                     <h4 class="card-title">Customer Rate</h4>
@@ -141,32 +188,31 @@
     //revenue
         var ctx = document.getElementById('revenueChart').getContext('2d');
 
-        var data = {
+        var revenueData = {
             labels: {!! json_encode($lodges->pluck('area')) !!}, // Lodge names as labels
-            datasets: [
-                @foreach($revenues as $lodgeName => $revenue)
-                    {
-                        label: "{{ $lodgeName }}",
-                        data: {!! json_encode($revenue) !!},
-                        borderColor: getRandomColor(), // Function to get random color for each lodge
-                        fill: false
-                    },
-                @endforeach
-            ]
+            datasets: [{
+                label: 'Revenue',
+                data: {!! json_encode(array_values($revenues)) !!},
+                backgroundColor: [
+                    @foreach($revenues as $lodgeName => $occupancy)
+                        getRandomColor(),
+                    @endforeach
+                ],
+                borderColor: 'transparent',
+                borderWidth: 1
+            }]
         };
 
-        var myChart = new Chart(ctx, {
+        var revenueChart = new Chart(ctx, {
             type: 'bar',
-            data: data,
+            data: revenueData,
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    yAxes: [{
-                        ticks: {
-                            beginAtZero: true
-                        }
-                    }]
+                    y: {
+                        beginAtZero: true
+                    }
                 }
             }
         });
@@ -184,38 +230,34 @@
     //Occupancy Rate
         var ctx = document.getElementById('occupancyRateChart').getContext('2d');
 
-        var dates = {!! json_encode($dailyReports->pluck('report_date')->toArray()) !!};
-
-        var data = {
-            labels: dates,
-            datasets: [
-                @foreach($occupancyRates as $lodgeName => $occupancyRate)
-                    {
-                        label: "{{ $lodgeName }}",
-                        data: {!! json_encode($occupancyRate) !!},
-                        borderColor: getRandomColor(), // Function to get random color for each lodge
-                        fill: false
-                    },
-                @endforeach
-            ]
+        var occupancyRateData = {
+            labels: {!! json_encode($lodges->pluck('area')) !!}, // Lodge names as labels
+            datasets: [{
+                label: 'Occupancy Rate',
+                data: {!! json_encode(array_values($averageOccupancyRates)) !!},
+                backgroundColor: [
+                    @foreach($averageOccupancyRates as $lodgeName => $occupancy)
+                        getRandomColor(),
+                    @endforeach
+                ],
+                borderColor: 'transparent',
+                borderWidth: 1
+            }]
         };
 
-        var myChart = new Chart(ctx, {
-            type: 'line',
-            data: data,
+        var occupancyRateChart = new Chart(ctx, {
+            type: 'bar',
+            data: occupancyRateData,
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    xAxes: [{
-                        ticks: {
-                            beginAtZero: true
-                        }
-                    }]
+                    y:{
+                        beginAtZero: true
+                    }
                 }
             }
         });
-
         // Function to generate random color
         function getRandomColor() {
             var letters = '0123456789ABCDEF';
@@ -225,38 +267,34 @@
             }
             return color;
         }
-
     //Damage Rate
         var ctx = document.getElementById('damageRateChart').getContext('2d');
 
-        var dates = {!! json_encode($dailyReports->pluck('report_date')->toArray()) !!};
-
-        var data = {
-            labels: dates,
-            datasets: [
-                @foreach($damageRates as $lodgeName => $damageRate)
-                    {
-                        label: "{{ $lodgeName }}",
-                        data: {!! json_encode($damageRate) !!},
-                        borderColor: getRandomColor(), // Function to get random color for each lodge
-                        fill: false
-                    },
-                @endforeach
-            ]
+        var damageRateData = {
+            labels: {!! json_encode($lodges->pluck('area')) !!}, // Lodge names as labels
+            datasets: [{
+                label: 'Damage Rate',
+                data: {!! json_encode(array_values($damageRates)) !!},
+                backgroundColor: [
+                    @foreach($damageRates as $lodgeName => $occupancy)
+                        getRandomColor(),
+                    @endforeach
+                ],
+                borderColor: 'transparent',
+                borderWidth: 1
+            }]
         };
 
-        var myChart = new Chart(ctx, {
-            type: 'line',
-            data: data,
+        var damageRateChart = new Chart(ctx, {
+            type: 'bar',
+            data: damageRateData,
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    xAxes: [{
-                        ticks: {
-                            beginAtZero: true
-                        }
-                    }]
+                    y:{
+                        beginAtZero: true
+                    }
                 }
             }
         });
@@ -274,7 +312,7 @@
     //Average Rate
         var ctx = document.getElementById('averageRateChart').getContext('2d');
 
-        var data = {
+        var averageRateData = {
             labels: {!! json_encode($lodges->pluck('area')) !!}, // Lodge names as labels
             datasets: [{
                 data: {!! json_encode(array_values($averageRates)) !!},
@@ -287,9 +325,9 @@
             }]
         };
 
-        var myChart = new Chart(ctx, {
+        var averageRateChart = new Chart(ctx, {
             type: 'polarArea',
-            data: data,
+            data: averageRateData,
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -309,7 +347,7 @@
     //Total Guest
         var ctx = document.getElementById('totalGuestsChart').getContext('2d');
 
-        var data = {
+        var totalGuestsData = {
             labels: {!! json_encode($lodges->pluck('area')) !!}, // Lodge names as labels
             datasets: [{
                 data: {!! json_encode(array_values($totalGuests)) !!},
@@ -321,9 +359,9 @@
             }]
         };
 
-        var myChart = new Chart(ctx, {
+        var totalGuestsChart = new Chart(ctx, {
             type: 'pie',
-            data: data,
+            data: totalGuestsData,
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -343,7 +381,7 @@
     //Damage Cost
         var ctx = document.getElementById('damageCostChart').getContext('2d');
 
-        var data = {
+        var damageCostData = {
             labels: {!! json_encode($lodges->pluck('area')) !!}, // Lodge names as labels
             datasets: [{
                 label: 'Damage Cost',
@@ -358,18 +396,16 @@
             }]
         };
 
-        var myChart = new Chart(ctx, {
+        var damageCostChart = new Chart(ctx, {
             type: 'bar',
-            data: data,
+            data: damageCostData,
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    yAxes: [{
-                        ticks: {
-                            beginAtZero: true
-                        }
-                    }]
+                    y:{
+                        beginAtZero: true
+                    }
                 }
             }
         });
@@ -386,7 +422,7 @@
     //Total Rooms
         var ctx = document.getElementById('totalRoomsChart').getContext('2d');
 
-        var data = {
+        var totalRoomsData = {
             labels: {!! json_encode($lodges->pluck('area')) !!}, // Lodge names as labels
             datasets: [{
                 data: {!! json_encode(array_values($totalRooms)) !!},
@@ -398,9 +434,9 @@
             }]
         };
 
-        var myChart = new Chart(ctx, {
+        var totalRoomsChart = new Chart(ctx, {
             type: 'pie',
-            data: data,
+            data: totalRoomsData,
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -419,7 +455,7 @@
     //Total Customer per gender
         var ctx = document.getElementById('totalCustomersChart').getContext('2d');
 
-        var data = {
+        var totalCustomersData = {
             labels: {!! json_encode($lodges->pluck('area')) !!}, // Lodge names as labels
             datasets: [
                 {
@@ -439,130 +475,173 @@
             ]
         };
 
-        var myChart = new Chart(ctx, {
+        var totalCustomersChart = new Chart(ctx, {
             type: 'bar',
-            data: data,
+            data: totalCustomersData,
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    yAxes: [{
-                        ticks: {
-                            beginAtZero: true
-                        }
-                    }]
+                    y: {
+                        beginAtZero: true
+                    }
                 }
             }
         });
-    //Generate Report
+    //Filtering chart
+        function showChart(chartId) {
 
-    function showReportForm(event) {
-        event.preventDefault();
-        Swal.fire({
-            title: 'Generate Report',
-            html: `
-                <form id="reportForm">
-                    @csrf
-                    <div class="col formtype">
-                        <div class="row-md-3">
-                            <div class="form-group">
-                                <label>Type of Report</label>
-                                <select name="type_report" id="type_report" class="form-control">
-                                    <option selected>Select Type of Report</option>
-                                    <option value="*">All</option>
-                                    <option value="revenue">Revenue</option>
-                                    <option value="occupancy_rate">Occupancy Rate</option>
-                                    <option value="average_rate">Ratings</option>
-                                    <option value="total_bookings">Bookings</option>
-                                    <option value="total_customers_by_gender">Customer-By-Gender</option>
-                                    <option value="total_damage">Damages</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="row-md-3">
-                            <div class="form-group">
-                                <label>Lodge Area</label>
-                                <select name="lodge_id" id="lodge_id" class="form-control">
-                                    <option selected>Select Lodge</option>
-                                    <option value="*">All</option>
-                                    @foreach ($lodges as $lodge)
-                                        <option value="{{ $lodge->lodge_id }}">{{ $lodge->area }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                        <div class="row-md-3">
-                            <div class="form-group">
-                                <label>Start Date</label>
-                                <input type="date" name="start_date" id="start_date" class="form-control">
-                            </div>
-                        </div>
-                        <div class="row-md-3">
-                            <div class="form-group">
-                                <label>End Date</label>
-                                <input type="date" name="end_date" id="end_date" class="form-control">
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            `,
-            showCancelButton: true,
-            confirmButtonText: 'Generate',
-            cancelButtonText: 'Cancel',
-            preConfirm: () => {
-                console.log('Report Type:', document.getElementById('type_report').value);
-                console.log('Lodge ID:', document.getElementById('lodge_id').value);
-                console.log('Start Date:', document.getElementById('start_date').value);
-                console.log('End Date:', document.getElementById('end_date').value);
+            const card = document.querySelectorAll('.col-md-12');
 
-                return {
-                    reportType: document.getElementById('type_report').value,
-                    lodgeId: document.getElementById('lodge_id').value,
-                    startDate: document.getElementById('start_date').value,
-                    endDate: document.getElementById('end_date').value
-                };
+            card.forEach(hideAll);
+            function hideAll(cardChart) {
+                cardChart.classList.add('d-none');
             }
-        }).then(result => {
-            if (result.isConfirmed) {
-                generateReport(result.value);
-            }
-        });
-    }
 
-    function generateReport(formData) {
-    // Send AJAX request to Laravel controller
-    // Get CSRF token value from the meta tag
-    var csrfToken = $('meta[name="csrf-token"]').attr('content');
+            if (chartId.value === '*') {
+                card.forEach(showAll);
+                function showAll(cardChart) {
+                    cardChart.classList.remove('d-none');
+                }
+            };
 
-    // Append CSRF token to the form data
-    formData._token = csrfToken;
-    $.ajax({
-        type: 'GET',
-        url: '/generate-report',
-        data: formData,
-        success: function(response) {
-            // Check if the response is a PDF file
-            if (response) {
-                // Directly open the PDF in the browser
-                window.open('/generate-report?reportType=' + formData.reportType + '&lodgeId=' + formData.lodgeId + '&startDate=' + formData.startDate + '&endDate=' + formData.endDate);
-            } else {
-                // Handle empty response or other errors
-                console.error('Empty response or error occurred');
-            }
-        },
-        error: function(xhr, status, error) {
-            console.error(xhr.responseText);
-            // Handle errors
+            if (chartId.value !== '*') {
+                document.getElementById(chartId.value).classList.remove('d-none');
+            };
         }
-    });
-}
+
+        const lodge = document.getElementById('lodge_id');
+        lodge.addEventListener('change', filterData);
+
+        function filterData() {
+            const selectedLodgeId = lodge.value;
+
+            if (selectedLodgeId!== '*') {
+                // Filter the data based on the selected lodge_id
+                filterChartData(revenueChart, revenueData, selectedLodgeId);
+                filterChartData(occupancyRateChart, occupancyRateData, selectedLodgeId);
+                filterChartData(damageRateChart, damageRateData, selectedLodgeId);
+                filterChartData(averageRateChart, averageRateData, selectedLodgeId);
+                filterChartData(totalGuestsChart, totalGuestsData, selectedLodgeId);
+                filterChartData(damageCostChart, damageCostData, selectedLodgeId);
+                filterChartData(totalRoomsChart, totalRoomsData, selectedLodgeId);
+                filterChartData(totalCustomersChart, totalCustomersData, selectedLodgeId);
+            } else {
+                // Display all the data
+                revenueChart.data = revenueData;
+                occupancyRateChart.data = occupancyRateData;
+                damageRateChart.data = damageRateData;
+                averageRateChart.data = averageRateData;
+                totalGuestsChart.data = totalGuestsData;
+                damageCostChart.data = damageCostData;
+                totalRoomsChart.data = totalRoomsData;
+                totalCustomersChart.data = totalCustomersData;
+
+                revenueChart.update();
+                occupancyRateChart.update();
+                damageRateChart.update();
+                averageRateChart.update();
+                totalGuestsChart.update();
+                damageCostChart.update();
+                totalRoomsChart.update();
+                totalCustomersChart.update();
+            }
+        }
+        function filterChartData(chart, data, selectedLodgeId) {
+            const filteredData = {
+                labels: [],
+                datasets: [{
+                    label: data.datasets[0].label,
+                    data: [],
+                    backgroundColor: [],
+                    borderColor: 'transparent',
+                    borderWidth: 1
+                }]
+            };
+
+            // Filter the data based on the selected lodge_id
+            for (let i = 0; i < data.labels.length; i++) {
+                if (data.labels[i] === selectedLodgeId) {
+                    filteredData.labels.push(data.labels[i]);
+                    filteredData.datasets[0].data.push(data.datasets[0].data[i]);
+                    filteredData.datasets[0].backgroundColor.push(data.datasets[0].backgroundColor[i]);
+                }
+            }
+
+            // Update the chart data
+            chart.data = filteredData;
+            chart.update();
+        }
+
+        const startDateInput = document.getElementById('start_date');
+        const endDateInput = document.getElementById('end_date');
+
+        // Add event listeners to the start date and end date inputs
+        startDateInput.addEventListener('change', filterChartsByDateRange);
+        endDateInput.addEventListener('change', filterChartsByDateRange);
+
+        function filterChartsByDateRange() {
+            // Get the selected start and end dates
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+
+            // Get the CSRF token from the meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            // AJAX request to fetch filtered data
+            $.ajax({
+                url: '/fetch-data',
+                type: 'POST',
+                data: {
+                    start_date: startDate,
+                    end_date: endDate
+                },
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken // Include CSRF token in headers
+                },
+                dataType: 'json',
+                success: function(response) {
+                    // Update the charts with the filtered data
+                    updateCharts(response);
+                },
+                error: function(xhr, status, error) {
+                    console.error(xhr.responseText);
+                }
+            });
+        }
+
+        function updateCharts(data) {
+            // Update revenue chart
+            updateChartData(revenueChart, data.revenues);
+
+            // Update occupancy rate chart
+            updateChartData(occupancyRateChart, data.averageOccupancyRates);
+
+            // Update damage rate chart
+            updateChartData(damageRateChart, data.damageRates);
+
+            // Update average rate chart
+            updateChartData(averageRateChart, data.averageRates);
+
+            // Update total guests chart
+            updateChartData(totalGuestsChart, data.totalGuests);
+
+            // Update damage cost chart
+            updateChartData(damageCostChart, data.damageCosts);
+
+            // Update total rooms chart
+            updateChartData(totalRoomsChart, data.totalRooms);
+
+            // Update total customers chart
+            updateChartData(totalCustomersChart, data.totalCustomers);
+        }
+
+        function updateChartData(chart, newData) {
+            chart.data.labels = Object.keys(newData);
+            chart.data.datasets[0].data = Object.values(newData);
+            chart.update();
+        }
+
 
 </script>
-
-<style>
-    .reportForm {
-        width: 60% !important; /* Adjust the width as needed */
-        max-width: 800px !important; /* Adjust the max-width as needed */
-    }
-</style>
 @endsection

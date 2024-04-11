@@ -22,8 +22,10 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\View;
+use Khill\Laracharts\Laracharts;
 use PDFLib;
 
 class AdminController extends Controller
@@ -852,26 +854,28 @@ class AdminController extends Controller
     public function Analytics()
     {
         $lodges = LodgeAreas::all(); // Fetch all lodges
+        $dates = DailyReports::pluck('report_date')->toArray();
 
         // Fetch revenue data for each lodge
         $revenues = [];
         foreach ($lodges as $lodge) {
             $dailyReports = DailyReports::where('lodge_id', $lodge->lodge_id)->get();
-            $revenues[$lodge->area] = $dailyReports->pluck('revenue')->toArray();
+            $revenues[$lodge->area] = $dailyReports->sum('revenue');
         }
 
         // Fetch occupancy rate data for each lodge
-        $occupancyRates = [];
+        $averageOccupancyRates = [];
+
         foreach ($lodges as $lodge) {
-            $dailyReports = DailyReports::where('lodge_id', $lodge->lodge_id)->get();
-            $occupancyRates[$lodge->area] = $dailyReports->pluck('occupancy_rate')->toArray();
+            $dailyReport = DailyReports::where('lodge_id', $lodge->lodge_id)->get();
+            $averageOccupancyRates[$lodge->area] = $dailyReport->avg('occupancy_rate');
         }
 
         // Fetch damage rate data for each lodge
         $damageRates = [];
         foreach ($lodges as $lodge) {
             $dailyReports = DailyReports::where('lodge_id', $lodge->lodge_id)->get();
-            $damageRates[$lodge->area] = $dailyReports->pluck('damage_rate')->toArray();
+            $damageRates[$lodge->area] = $dailyReports->avg('damage_rate');
         }
 
         // Fetch average rate data for each lodge
@@ -893,8 +897,6 @@ class AdminController extends Controller
 
             $totalGuests[$lodge->area] = $total_customers_by_gender;
         }
-
-
 
         $damageCosts = [];
         foreach ($lodges as $lodge) {
@@ -923,90 +925,127 @@ class AdminController extends Controller
         return view('Admin.analytics', compact(
                                         'lodges',
                                         'revenues',
-                                        'occupancyRates',
+                                        'averageOccupancyRates',
                                         'dailyReports',
                                         'damageRates',
                                         'averageRates',
                                         'totalGuests',
                                         'damageCosts',
                                         'totalRooms',
-                                        'totalCustomers'
+                                        'totalCustomers',
+                                        'dates'
                                     ));
     }
 
-    public function generateReport(Request $request)
+    // public function generateReport(Request $request)
+    // {
+    //     $reportType = $request->input('type_report');
+    //     $lodgeId = $request->input('lodge_id');
+    //     $startDate = $request->input('start_date');
+    //     $endDate = $request->input('end_date');
+
+    //     // Generate report data
+    //     $reportData = DailyReports::generateReport($reportType, $lodgeId, $startDate, $endDate);
+
+    //     return response()->json($reportData);
+    // }
+
+    public function filterData(Request $request)
     {
-        // Retrieve form data
-        $reportType = $request->input('reportType');
-        $lodgeId = $request->input('lodgeId');
-        $startDate = $request->input('startDate');
-        $endDate = $request->input('endDate');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
 
-        // Query database based on selected parameters
-        $reports = DailyReports::where('report_date', '>=', $startDate)
-            ->where('report_date', '<=', $endDate);
-
-        if ($lodgeId !== '*') {
-            $reports->where('lodge_id', $lodgeId);
+        $lodges = LodgeAreas::all();
+        // Perform the filtering logic based on the start and end dates
+        // Fetch revenue data for each lodge
+        $revenues = [];
+        foreach ($lodges as $lodge) {
+            $dailyReports = DailyReports::where('lodge_id', $lodge->lodge_id)
+                                        ->whereBetween('report_date', [$startDate, $endDate])
+                                        ->get();
+            $revenues[$lodge->area] = $dailyReports->sum('revenue');
         }
 
-        // Add more conditions based on report type if needed
-        // For example:
-        if ($reportType === '*') {
-            // Retrieve all available report types
-            $reports->select('report_date', 'revenue', 'occupancy_rate', 'damage_rate', 'total_damage', 'total_bookings', 'average_rate', 'total_customers_by_gender');
-        } elseif ($reportType === 'revenue') {
-            $reports->select('report_date', 'revenue');
-        } elseif ($reportType === 'occupancy_rate') {
-            $reports->select('report_date', 'occupancy_rate');
-        } elseif($reportType === 'average_rate') {
-            $reports->select('report_date', 'average_rate');
-        } elseif($reportType === 'total_bookings') {
-            $reports->select('report_date', 'total_bookings');
-        } elseif($reportType === 'total_customers_by_gender') {
-            $reports->select('report_date', 'total_customers_by_gender');
-        } elseif($reportType === 'total_damage') {
-            $reports->select('report_date', 'damage_rate', 'total_damage');
+        // Fetch occupancy rate data for each lodge
+        $averageOccupancyRates = [];
+
+        foreach ($lodges as $lodge) {
+            $dailyReport = DailyReports::where('lodge_id', $lodge->lodge_id)
+                                        ->whereBetween('report_date', [$startDate, $endDate])
+                                        ->get();
+            $averageOccupancyRates[$lodge->area] = $dailyReport->avg('occupancy_rate');
         }
 
-        // Execute the query
-        $reportData = $reports->get();
-
-        $revenueChart = $this->revenueChart($reportData);
-
-        // Check if it's an AJAX request
-        if ($request->ajax()) {
-            return response()->json($reportData);
+        // Fetch damage rate data for each lodge
+        $damageRates = [];
+        foreach ($lodges as $lodge) {
+            $dailyReports = DailyReports::where('lodge_id', $lodge->lodge_id)
+                                        ->whereBetween('report_date', [$startDate, $endDate])
+                                        ->get();
+            $damageRates[$lodge->area] = $dailyReports->avg('damage_rate');
         }
-        // Generate PDF from view
-        $pdf = PDF::loadView('Admin.report',
-                        compact('reportData',
-                                'reportType',
-                                'lodgeId',
-                                'startDate',
-                                'endDate',
-                                'revenueChart'));
 
-        // Download the PDF with a specific filename
-        return $pdf->stream('report.pdf');
-    }
+        // Fetch average rate data for each lodge
+        $averageRates = [];
+        foreach ($lodges as $lodge) {
+            $dailyReports = DailyReports::where('lodge_id', $lodge->lodge_id)
+                                        ->whereBetween('report_date', [$startDate, $endDate])
+                                        ->get();
+            $averageRates[$lodge->area] = $dailyReports->pluck('average_rate')->avg();
+        }
 
-    private function revenueChart($reportData)
-    {
-        $dates = $reportData->pluck('report_date')->toArray();
-        $revenue = $reportData->pluck('revenue')->toArray();
+        $totalGuests = [];
+        foreach ($lodges as $lodge) {
+            $dailyReports = DailyReports::where('lodge_id', $lodge->lodge_id)
+                                        ->whereBetween('report_date', [$startDate, $endDate])
+                                        ->get();
 
-        return json_encode([
-            'labels' => $dates,
-            'datasets' => [
-                [
-                    'labels' => 'Revenue',
-                    'data' => $revenue,
-                    'backgroundColor' => 'rgba(255, 99, 132, 0.2)',
-                    'borderColor' => 'rgba(255, 99, 132, 1)',
-                    'borderWidth' => 1,
-                ],
-            ],
+            // Decode JSON and sum values, ensuring they are numeric
+            $total_customers_by_gender = collect($dailyReports->pluck('total_customers_by_gender')->filter())->flatten()->reduce(function ($carry, $item) {
+                // Check if item is numeric before adding
+                return is_numeric($item) ? $carry + $item : $carry;
+            }, 0);
+
+            $totalGuests[$lodge->area] = $total_customers_by_gender;
+        }
+
+        $damageCosts = [];
+        foreach ($lodges as $lodge) {
+            $dailyReports = DailyReports::where('lodge_id', $lodge->lodge_id)
+                                        ->whereBetween('report_date', [$startDate, $endDate])
+                                        ->get();
+            $damageCosts[$lodge->area] = $dailyReports->sum('total_damage');
+        }
+
+        // Fetch total rooms data for each lodge
+        $totalRooms = [];
+        foreach ($lodges as $lodge) {
+            $totalRooms[$lodge->area] = $lodge->total_rooms;
+        }
+
+        // Fetch total customer data for each lodge and gender
+        $totalCustomers = [];
+        foreach ($lodges as $lodge) {
+            $dailyReports = DailyReports::where('lodge_id', $lodge->lodge_id)
+                                        ->whereBetween('report_date', [$startDate, $endDate])
+                                        ->get();
+            $maleCustomers = $dailyReports->sum('total_customers_male');
+            $femaleCustomers = $dailyReports->sum('total_customers_female');
+            $totalCustomers[$lodge->area] = [
+                'male' => $maleCustomers,
+                'female' => $femaleCustomers
+            ];
+        }
+
+        return response()->json([
+            'revenues' => $revenues,
+            'averageOccupancyRates' => $averageOccupancyRates,
+            'damageRates' => $damageRates,
+            'averageRates' => $averageRates,
+            'totalGuests' => $totalGuests,
+            'damageCosts' => $damageCosts,
+            'totalRooms' => $totalRooms,
+            'totalCustomers' => $totalCustomers,
         ]);
     }
 }

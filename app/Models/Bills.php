@@ -9,7 +9,7 @@ class Bills extends Model
 {
     use HasFactory;
 
-    protected $primaryKey = 'book_id';
+    protected $primaryKey = 'bill_id';
 
     protected $fillable = [
         'book_id',

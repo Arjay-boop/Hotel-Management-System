@@ -37,7 +37,6 @@
         }
 
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="header">
@@ -69,7 +68,7 @@
             @if ($reportType === 'total_damage')
                 <h3>Damage and Maintenance Report</h3>
             @endif
-            <p>{{ $startDate }}-{{ $endDate }}</p>
+            <p>{{ $startDate }} to {{ $endDate }}</p>
             @if ($lodgeId === '*')
                 <p>CLSU</p>
             @else
@@ -82,28 +81,12 @@
 
     <!-- Example: Displaying a table of report data -->
     @if ($reportType === 'revenue' || $reportType === '*')
-        <div class="chart-revenue">
-            <canvas id="revenueChart" width="800" height="400"></canvas>
+        <div class="revenue_chart">
+            <img src="{{ $revenueImg }}" alt="Revenue Chart">
         </div>
         <div class="description">
             <span></span>
         </div>
     @endif
-    <script>
-        // Get chart data passed from the controller
-        var revenueChart = {!! $revenueChart !!};
-
-        // Render the chart
-        if (revenueChart) {
-            var ctx = document.getElementById('revenueChart').getContext('2d');
-            var myChart = new Chart(ctx, {
-                type: 'bar', // Change chart type if needed
-                data: revenueChart,
-                options: {
-                    // Additional chart options if needed
-                }
-            });
-        }
-    </script>
 </body>
 </html>
