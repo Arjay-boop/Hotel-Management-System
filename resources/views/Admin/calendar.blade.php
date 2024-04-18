@@ -9,6 +9,7 @@
                     <h4 class="card-title float-left mt-2">Calendar</h4>
                     <button type="button" class="btn btn-primary float-right veiwbutton" data-toggle="modal" data-target="#addEventModal">Add Event</button>
                     <button type="button" class="btn btn-primary float-right veiwbutton" data-toggle="modal" data-target="#addBookingModal">Add Booking</button>
+                    <button onclick="removeEventsFromCalendar()" type="button" class="btn btn-primary float-right veiwbutton">Remove Events</button>
                 </div>
             </div>
         </div>
@@ -20,7 +21,7 @@
             </div>
         </div>
     </div>
-    <script src="{{ asset('assets/js/calendar.js') }}"></script>
+    {{-- <script src="{{ asset('assets/js/calendar.js') }}"></script> --}}
 </div>
 <div id="addEventModal" class="modal fade">
     <div class="modal-dialog">
@@ -99,175 +100,30 @@
 </div>
 
 <script>
-    // Add the following code for handling add event form submission
-    document.getElementById('addEventForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const eventName = document.getElementById('eventName').value;
-        const description = document.getElementById('description').value;
-        const startDate = document.getElementById('start_date').value;
-        const endDate = document.getElementById('end_date').value;
-        const lodgeId = document.getElementById('lodge_id').value; // Retrieve lodge_id if available
+    // Add this JavaScript function to remove the events
+function removeEventsFromCalendar() {
+    const eventsToRemove = [
+        "3:40p test Event 1",
+        // Add the descriptions of the other events you want to remove here
+        "Description of event 2",
+        "Description of event 3",
+        "Description of event 4"
+    ];
 
-        const event = {
-            name: eventName,
-            description: description,
-            start_date: startDate,
-            end_date: endDate,
-            lodge_id: lodgeId // Include lodge_id in the event object
-        };
+    eventsToRemove.forEach(eventDesc => {
+        // Find the index of the event to remove
+        const indexToRemove = calendar.events.findIndex(event => event.desc === eventDesc);
 
-        addEvent(event);
-        document.getElementById('addEventModal').modal('hide');
+        // Remove the event from the events array
+        if (indexToRemove !== -1) {
+            calendar.events.splice(indexToRemove, 1);
+        }
     });
-    function addEvent(event) {
-        // Send an asynchronous POST request to store the event data
-        fetch('{{ route("admin.store-event") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify(event)
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Check if the request was successful
-            if (data.success) {
-                // Update the calendar with the newly added event
-                renderEvents(data.events);
-            } else {
-                console.error('Failed to add event:', data.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-    });
+
+    // Call renderEvents to update the calendar display
+    calendar.renderEvents();
 }
-    // Add the following code for handling add event form submission
-//     document.getElementById('addEventForm').addEventListener('submit', function(e) {
-//     e.preventDefault();
-//     const eventName = document.getElementById('eventName').value;
-//     const description = document.getElementById('description').value;
-//     const startDate = document.getElementById('start_date').value;
-//     const endDate = document.getElementById('end_date').value;
-//     const lodgeId = document.getElementById('lodge_id').value; // Retrieve lodge_id if available
 
-//     const event = {
-//         name: eventName,
-//         description: description,
-//         start_date: startDate,
-//         end_date: endDate,
-//         lodge_id: lodgeId // Include lodge_id in the event object
-//     };
-
-//     addEvent(event);
-//     document.getElementById('addEventModal').modal('hide');
-// });
-
-
-    // Add the following code for handling add booking form submission
-    document.getElementById('addBookingForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const bookingName = document.getElementById('bookingName').value;
-    const bookingDate = document.getElementById('bookingDate').value;
-    const bookingTime = document.getElementById('bookingTime').value;
-    const booking = {
-        name: bookingName,
-        date: bookingDate,
-        time: bookingTime};
-    addBooking(booking);
-    document.getElementById('addBookingModal').modal('hide');
-    });
-
-    // Add the following code for handling event clicks
-    function onEventClick(e) {
-    const eventEl = e.target.closest('.event');
-    const event = {
-        name: eventEl.dataset.name,
-        date: eventEl.dataset.date,
-        time: eventEl.dataset.time
-    };
-    console.log(event);
-    }
-
-    // Add the following code for handling booking clicks
-    function onBookingClick(e) {
-    const bookingEl = e.target.closest('.booking');
-    const booking = {
-        name: bookingEl.dataset.name,
-        date: bookingEl.dataset.date,
-        time: bookingEl.dataset.time
-    };
-    console.log(booking);
-    }
-
-    // Add the following code for rendering events
-    function renderEvents(events) {
-    const calendarEl = document.getElementById('calendar');
-    const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        events: events,
-        eventClick: onEventClick
-    });
-    calendar.render();
-    }
-
-    // Add the following code for rendering bookings
-    function renderBookings(bookings) {
-    const calendarEl = document.getElementById('calendar');
-    const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        events: bookings,
-        eventClick: onBookingClick
-    });
-    calendar.render();
-    }
-
-    // Add the following code for adding events
-    function addEvent(event) {
-    const events = getEvents();
-    events.push(event);
-    saveEvents(events);
-    renderEvents(events);
-    }
-
-    // Add the following code for adding bookings
-    function addBooking(booking) {
-    const bookings = getBookings();
-    bookings.push(booking);
-    saveBookings(bookings);
-    renderBookings(bookings);
-    }
-
-    // Add the following code for getting events from local storage
-    function getEvents() {
-    const events = localStorage.getItem('events');
-    return events ? JSON.parse(events) : [];
-    }
-
-    // Add the following code for getting bookings from local storage
-    function getBookings() {
-    const bookings = localStorage.getItem('bookings');
-    return bookings ? JSON.parse(bookings) : [];
-    }
-
-    // Add the following code for saving events to local storage
-    function saveEvents(events) {
-    localStorage.setItem('events', JSON.stringify(events));
-    }
-
-    // Add the following code for saving bookings to local storage
-    function saveBookings(bookings) {
-    localStorage.setItem('bookings', JSON.stringify(bookings));
-    }
-
-    // Initialize events and bookings arrays
-    const events = getEvents();
-    const bookings = getBookings();
-
-    // Render events and bookings
-    renderEvents(events);
-    renderBookings(bookings);
 </script>
 @endsection
 
